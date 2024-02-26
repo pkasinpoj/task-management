@@ -4,12 +4,14 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTaskFilterDto } from './dto/get-tasks-filter.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from './task.entity';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
+import { TasksRepository } from './task.repository';
 
 @Injectable()
 export class TasksService {
   constructor(
-    @InjectRepository(Task) private tasksRepository: Repository<Task>,
+    // @InjectRepository(Task) private tasksRepository: Repository<Task>,
+    private tasksRepository: TasksRepository,
   ) {}
   //   getAllTask(): Task[] {
   //     return this.task;
@@ -31,24 +33,16 @@ export class TasksService {
   //     return tasks;
   //   }
 
-  async getTaskById(id: string): Promise<Task> {
-    const found = await this.tasksRepository.findOne({ where: { id } });
-    if (!found) {
-      throw new NotFoundException(`Task with ID "${id}" not found`); // เพิ่ม ' ที่สิ้นสุดข้อความ
-    }
-    return found;
+  getTasks(filterDto: GetTaskFilterDto): Promise<Task[]> {
+    return this.tasksRepository.getTasks(filterDto);
   }
 
-  async createTask(createTaskDto: CreateTaskDto): Promise<Task> {
-    const { title, description } = createTaskDto;
-    const task = this.tasksRepository.create({
-      title,
-      description,
-      status: TaskStatus.OPEN,
-    });
+  async getTaskById(id: string): Promise<Task> {
+    return this.tasksRepository.findTaskById(id);
+  }
 
-    await this.tasksRepository.save(task);
-    return task;
+  createTask(createTaskDto: CreateTaskDto): Promise<Task> {
+    return this.tasksRepository.createTask(createTaskDto);
   }
   //   getTaskById(id: string): Task {
   //     const found = this.task.find((item) => item.id === id);
@@ -68,20 +62,26 @@ export class TasksService {
   //     this.task.push(task);
   //     return task;
   //   }
-  //   deleteTaskById(id: string): void {
-  //     // My Idea
-  //     // const index = this.task.findIndex((item) => item.id === id);
-  //     // if (index !== -1) {
-  //     //   this.task.splice(index, 1);
-  //     //   return this.task; // บอกว่าลบสำเร็จ
-  //     // }
-  //     // My teacher
-  //     this.getTaskById(id);
-  //     this.task = this.task.filter((task) => task.id !== id);
-  //   }
-  //   updateTaskStatus(id: string, status: TaskStatus) {
-  //     const task = this.getTaskById(id);
-  //     task.status = status;
-  //     return task;
-  //   }
+  async deleteTaskById(id: string): Promise<DeleteResult> {
+    // My Idea
+    // const index = this.task.findIndex((item) => item.id === id);
+    // if (index !== -1) {
+    //   this.task.splice(index, 1);
+    //   return this.task; // บอกว่าลบสำเร็จ
+    // }
+    // My teacher
+    // this.getTaskById(id);
+    // this.task = this.task.filter((task) => task.id !== id);
+    const task = await this.tasksRepository.findTaskById(id);
+    if (!task) {
+      throw new NotFoundException();
+    }
+    return this.tasksRepository.deleteTaskById(id);
+  }
+  async updateTaskStatus(id: string, status: TaskStatus) {
+    const task = await this.getTaskById(id);
+    task.status = status;
+    await this.tasksRepository.save(task);
+    return task;
+  }
 }
